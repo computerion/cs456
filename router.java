@@ -119,6 +119,7 @@ public class router {
 
 		updateRoutingTable(pkt);
 		lspdus.add(pkt);
+		
 		int sender_link_id = pkt.link_id;
 		for (int i=0; i < links.length; i++) {
 			if (links[i].link_id != sender_link_id) {
@@ -128,6 +129,9 @@ public class router {
 
 		routerLog.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
     	routerLog.flush();
+
+    	logTopology();
+    	logRoutingTable();
 	}
 
 	private static void updateRoutingTable(pkt_LSPDU pkt) {
@@ -140,8 +144,6 @@ public class router {
 				adjacency[seen_pkt.router_id-1][pkt.router_id-1] = new link_cost(pkt.link_id, pkt.cost);
 			}
 		}
-
-		logTopology();
 
 		if (adjacencyMatrixUpdated) {
 			updateShortestPath();
@@ -161,6 +163,19 @@ public class router {
 			for (int j=0; j<edges.size(); j++) {
 				pkt_LSPDU lspdu_pkt = edges.get(j);
 				routerLog.printf("R%d -> R%d link %d cost %d\n", routerId, i+1, lspdu_pkt.link_id, lspdu_pkt.cost);
+			}
+		}
+		routerLog.flush();
+	}
+
+	private static void logRoutingTable() {
+		for (int i=0; i<NBR_ROUTER; i++) {
+			if (routingTable[i].cost == DIST_INFINITE) {
+				routerLog.printf("R%d -> R%d -> INF, INF\n", routerId, i + 1);
+			} else if (i == routerId -1) {
+				routerLog.printf("R%d -> R%d -> Local, 0\n", routerId, i + 1);
+			} else {
+				routerLog.printf("R%d -> R%d -> R%d, %d\n", routerId, i + 1, routingTable[i].reciever_router_id, routingTable[i].cost);
 			}
 		}
 		routerLog.flush();
@@ -206,16 +221,9 @@ public class router {
 		}
 		for (int i=0; i<NBR_ROUTER; i++) {
 			int nextId = next_router_id[i];
-			link routingLink = new link(nextId, adjacency[routerId -1][nextId].link, dist[i]);
-			if (dist[i] == DIST_INFINITE) {
-				routerLog.printf("R%d -> R%d -> INF, INF\n", routerId, i + 1);
-			} else if (i == routerId -1) {
-				routerLog.printf("R%d -> R%d -> Local, 0\n", routerId, i + 1);
-			} else {
-				routerLog.printf("R%d -> R%d -> R%d, %d\n", routerId, i + 1, nextId + 1, dist[i]);
-			}
+			link routingLink = new link(nextId + 1, adjacency[routerId -1][nextId].link, dist[i]);
+			routingTable[i] = routingLink;
 		}
-		routerLog.flush();
 	}
 
 	private static void sendInit() throws Exception {
