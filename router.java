@@ -9,6 +9,7 @@ public class router {
 	private static int routerId;
 	private static link[] links;
 	private static link[] routingTable;
+	private static int[][] adjacency;
 
 	private static DatagramSocket socket;
 	private static int routerPort;
@@ -43,6 +44,13 @@ public class router {
 	    routerPort = Integer.parseInt(args[3]);
 	    routingTable = new link[NBR_ROUTER];
 	    lspdus = new ArrayList<pkt_LSPDU>();
+	    adjacency = new int[NBR_ROUTER][NBR_ROUTER];
+
+	    for (int i=0; i < NBR_ROUTER; i++) {
+	    	for (int j=0; j < NBR_ROUTER; j++) {
+	    		adjacency[i][j] = 2147483647;
+	    	}
+	    }
 
 	    for(int i=0; i<routingTable.length; i++) {
 	    	routingTable[i] = new link(i+1, -1, 2147483647);
@@ -63,7 +71,6 @@ public class router {
 	    	links[i] = l;
 	    	pkt_LSPDU lspdu = new pkt_LSPDU(routerId, l.link_id, l.cost);
 	    	lspdus.add(lspdu);
-	    	System.out.println("new link: " + lspdus.size() + " " +l.link_id + " " + l.cost);
 	    }
 	}
 
@@ -72,7 +79,6 @@ public class router {
 	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
 	    socket.receive(receivePacket);
 	    int packetSize = receivePacket.getLength();
-	    System.out.println("Got packet of size: " + packetSize);
 	    if (packetSize == pkt_HELLO.SIZE) {
 	    	pkt_HELLO pkt = pkt_HELLO.getData(receivePacket.getData());
 	    	handleHello(pkt);
@@ -85,7 +91,7 @@ public class router {
 	private static void handleHello(pkt_HELLO pkt) throws Exception {
 		int router_id = pkt.router_id;
 		int link_id = pkt.link_id;
-		System.out.println("Handling Hello");
+		//System.out.println("Handling Hello");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU lspdu_pkt = lspdus.get(i);
 			sendLSPDU(link_id, lspdu_pkt);
@@ -104,12 +110,30 @@ public class router {
 			}
 		}
 
+		updateRoutingTable(pkt);
 		lspdus.add(pkt);
 		int sender_link_id = pkt.link_id;
 		for (int i=0; i < links.length; i++) {
 			if (links[i].link_id != sender_link_id) {
  				sendLSPDU(links[i].link_id, pkt);
 			}
+		}
+	}
+
+	private static void updateRoutingTable(pkt_LSPDU pkt) {
+		Boolean adjacencyMatrixUpdated = false;
+		for (int i=0; i<lspdus.size(); i++) {
+			pkt_LSPDU seen_pkt = lspdus.get(i);
+			if (pkt.link_id == seen_pkt.link_id) {
+				adjacency[pkt.router_id][seen_pkt.router_id] = pkt.cost;
+				adjacency[seen_pkt.router_id][pkt.router_id] = pkt.cost;
+			}
+		}
+		for (int i=0; i<NBR_ROUTER; i++) {
+			for (int j=0; j<NBR_ROUTER; j++) {
+				System.out.print(adjacency[i][j] + " ");
+			}
+			System.out.println();
 		}
 	}
 
@@ -121,7 +145,7 @@ public class router {
 
 	private static void sendLSPDU(int link_id, pkt_LSPDU pkt) throws Exception {
 		pkt.setDestination(routerId, link_id);
-		System.out.println("Sending out LSPDU: " + pkt.link_id + " " + pkt.router_id + " " + pkt.cost);
+		//System.out.println("Sending out LSPDU: " + pkt.link_id + " " + pkt.router_id + " " + pkt.cost);
     	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
 	}
