@@ -42,6 +42,7 @@ public class router {
 	    hostPort = Integer.parseInt(args[2]);
 	    routerPort = Integer.parseInt(args[3]);
 	    routingTable = new link[NBR_ROUTER];
+	    lspdus = new ArrayList<pkt_LSPDU>();
 
 	    for(int i=0; i<routingTable.length; i++) {
 	    	routingTable[i] = new link(i+1, -1, 2147483647);
