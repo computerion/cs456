@@ -58,7 +58,7 @@ public class router {
 	    	routingTable[i] = new link(i+1, -1, DIST_INFINITE);
 	    }
 
-	    routerLog = new PrintWriter(new FileWriter(String.format("router%03d.log", routerId)), true);
+	    routerLog = new PrintWriter(new FileWriter(String.format("router%d.log", routerId)), true);
 	  }
 
 	private static void recieveCircuitDB() throws Exception {
@@ -74,7 +74,7 @@ public class router {
 	    	pkt_LSPDU lspdu = new pkt_LSPDU(routerId, l.link_id, l.cost);
 	    	lspdus.add(lspdu);
 	    }
-	    routerLog.printf("R%03d receives a CIRCUIT_DB: nbr_link %03d\n", routerId, circutDB.nbr_link);
+	    routerLog.printf("R%d receives a CIRCUIT_DB: nbr_link %d\n", routerId, circutDB.nbr_link);
 	    routerLog.flush();
 
 	    logTopology();
@@ -106,7 +106,7 @@ public class router {
 				links[i].reciever_router_id = router_id;
 			}
 		}
-		routerLog.printf("R%03d receives a HELLO: router_id %03d link_id %03d\n", routerId, pkt.router_id, pkt.link_id);
+		routerLog.printf("R%d receives a HELLO: router_id %d link_id %d\n", routerId, pkt.router_id, pkt.link_id);
     	routerLog.flush();
 	}
 
@@ -126,7 +126,7 @@ public class router {
 			}
 		}
 
-		routerLog.printf("R%03d receives an LS PDU: sender %03d, router_id %03d, link_id %03d, cost %03d, via %03d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
+		routerLog.printf("R%d receives an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
     	routerLog.flush();
 	}
 
@@ -157,10 +157,10 @@ public class router {
 					edges.add(lspdu_pkt);
 				}
 			}
-			routerLog.printf("R%03d -> R%03d nbr link %03d\n", routerId, i+1, edges.size());
+			routerLog.printf("R%d -> R%d nbr link %d\n", routerId, i+1, edges.size());
 			for (int j=0; j<edges.size(); j++) {
 				pkt_LSPDU lspdu_pkt = edges.get(j);
-				routerLog.printf("R%03d -> R%03d link %03d cost %03d\n", routerId, i+1, lspdu_pkt.link_id, lspdu_pkt.cost);
+				routerLog.printf("R%d -> R%d link %d cost %d\n", routerId, i+1, lspdu_pkt.link_id, lspdu_pkt.cost);
 			}
 		}
 		routerLog.flush();
@@ -208,11 +208,11 @@ public class router {
 			int nextId = next_router_id[i];
 			link routingLink = new link(nextId, adjacency[routerId -1][nextId].link, dist[i]);
 			if (dist[i] == DIST_INFINITE) {
-				routerLog.printf("R%03d -> R%03d -> INF, INF\n", routerId, i + 1);
+				routerLog.printf("R%d -> R%d -> INF, INF\n", routerId, i + 1);
 			} else if (i == routerId -1) {
-				routerLog.printf("R%03d -> R%03d -> Local, 0\n", routerId, i + 1);
+				routerLog.printf("R%d -> R%d -> Local, 0\n", routerId, i + 1);
 			} else {
-				routerLog.printf("R%03d -> R%03d -> R%03d, 0\n", routerId, i + 1, nextId + 1, dist[i]);
+				routerLog.printf("R%d -> R%d -> R%d, 0\n", routerId, i + 1, nextId + 1, dist[i]);
 			}
 		}
 		routerLog.flush();
@@ -222,7 +222,7 @@ public class router {
 		pkt_INIT pkt = new pkt_INIT(routerId);
     	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
-    	routerLog.printf("R%03d sends an INIT: router_id %03d\n", routerId, routerId);
+    	routerLog.printf("R%d sends an INIT: router_id %d\n", routerId, routerId);
     	routerLog.flush();
 	}
 
@@ -230,7 +230,7 @@ public class router {
 		pkt.setDestination(routerId, link_id);
     	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort);
     	socket.send(sendPacket);
-    	routerLog.printf("R%03d sends an LS PDU: sender %03d, router_id %03d, link_id %03d, cost %03d, via %03d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
+    	routerLog.printf("R%d sends an LS PDU: sender %d, router_id %d, link_id %d, cost %d, via %d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
     	routerLog.flush();
 	}
 
@@ -239,7 +239,7 @@ public class router {
 			pkt_HELLO pkt = new pkt_HELLO(routerId, links[i].link_id);
 	    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_HELLO.SIZE, hostAddress, hostPort); 
 	    	socket.send(sendPacket);
-	    	routerLog.printf("R%03d sends a HELLO: router_id %03d link_id %03d\n", routerId, routerId, links[i].link_id);
+	    	routerLog.printf("R%d sends a HELLO: router_id %d link_id %d\n", routerId, routerId, links[i].link_id);
     		routerLog.flush();
 		}
 	}
