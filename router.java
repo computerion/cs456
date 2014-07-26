@@ -63,6 +63,13 @@ public class router {
 	    	socket.send(sendPacket);
 		}
 	}
+
+	private static void listen() throws Exception {
+		byte[] data = new byte[512];
+	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
+	    socket.receive(receivePacket);
+	    System.out.println("Recieved: " + receivePacket.getLength());
+	}
 }
 
 class link {
@@ -103,12 +110,43 @@ class pkt_HELLO {
 	}
 } 
 
-class pkt_LSPDU { 
+class pkt_LSPDU {
+	public static final int SIZE = 20;
 	public int sender; /* sender of the LS PDU */ 
 	public int router_id; /* router id */ 
 	public int link_id; /* link id */ 
 	public int cost; /* cost of the link */ 
-	public int via; /* id of the link through which the LS PDU is sent */ 
+	public int via; /* id of the link through which the LS PDU is sent */
+
+	public pkt_LSPDU(int sender, int router_id, int link_id, int cost, int via) {
+		this.sender = sender;
+		this.router_id = router_id;
+		this.link_id = link_id;
+		this.cost = cost;
+		this.via = via;
+	}
+
+	public byte[] toByte() {
+		ByteBuffer buffer = ByteBuffer.allocate(SIZE);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);
+		buffer.putInt(sender);
+		buffer.putInt(router_id);
+		buffer.putInt(link_id);
+		buffer.putInt(cost);
+		buffer.putInt(via);
+		return buffer.array();
+	}
+	
+	public static pkt_LSPDU getData(byte[] UDPdata) throws Exception {
+		ByteBuffer buffer = ByteBuffer.wrap(UDPdata);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);
+		int sender = buffer.getInt();
+		int router_id = buffer.getInt();
+		int link_id = buffer.getInt();
+		int cost = buffer.getInt();
+		int via = buffer.getInt();
+		return new pkt_LSPDU(sender, router_id, link_id, cost, via);
+	}
 }
 
 class pkt_INIT { 
