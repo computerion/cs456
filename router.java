@@ -88,6 +88,7 @@ class pkt_HELLO {
 
 	public byte[] toByte() {
 		ByteBuffer buffer = ByteBuffer.allocate(SIZE);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		buffer.putInt(router_id);
 		buffer.putInt(link_id);
 		return buffer.array();
@@ -120,6 +121,7 @@ class pkt_INIT {
 
 	public byte[] toByte() {
 		ByteBuffer buffer = ByteBuffer.allocate(4);
+		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		buffer.putInt(router_id);
 		return buffer.array();
 	}
