@@ -21,6 +21,10 @@ public class router {
 		sendInit();
 		recieveCircuitDB();
 		sendHellos();
+
+		while (true) {
+			listen();
+		}
 	}
 
 	private static void init(String args[]) throws Exception {
