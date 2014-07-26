@@ -38,10 +38,10 @@ public class router {
 	  }
 
 	private static void sendInit() throws Exception {
-		ByteBuffer buffer = ByteBuffer.allocate(512);
+		ByteBuffer buffer = ByteBuffer.allocate(4);
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		buffer.putInt(routerId);
-    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 512, hostAddress, hostPort); 
+    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 4, hostAddress, hostPort); 
     	System.out.println("Sending"); 
     	socket.send(sendPacket);
     	System.out.println("Sent Packets");
