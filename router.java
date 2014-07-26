@@ -212,7 +212,7 @@ public class router {
 			} else if (i == routerId -1) {
 				routerLog.printf("R%d -> R%d -> Local, 0\n", routerId, i + 1);
 			} else {
-				routerLog.printf("R%d -> R%d -> R%d, 0\n", routerId, i + 1, nextId + 1, dist[i]);
+				routerLog.printf("R%d -> R%d -> R%d, %d\n", routerId, i + 1, nextId + 1, dist[i]);
 			}
 		}
 		routerLog.flush();
