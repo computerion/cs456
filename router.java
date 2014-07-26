@@ -72,6 +72,7 @@ public class router {
 	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
 	    socket.receive(receivePacket);
 	    int packetSize = receivePacket.getLength();
+	    System.out.println("Got packet of size: " + packetSize);
 	    if (packetSize == pkt_HELLO.SIZE) {
 	    	pkt_HELLO pkt = pkt_HELLO.getData(receivePacket.getData());
 	    	handleHello(pkt);
