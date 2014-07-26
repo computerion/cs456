@@ -126,10 +126,8 @@ public class router {
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		buffer.putInt(1);
 		buffer.putInt(2);
-		buffer.putInt(3);
-		buffer.putInt(4);
-		buffer.putInt(5);
-    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 20, hostAddress, hostPort); 
+
+    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 9, hostAddress, hostPort); 
     	socket.send(sendPacket);
 	}
 
