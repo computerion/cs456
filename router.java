@@ -95,13 +95,18 @@ public class router {
 
 	private static void handleLSPDU(pkt_LSPDU pkt) throws Exception {
 		for (int i=0; i<lspdus.size(); i++) {
-			if (lspdus.get(i).link_id == pkt.link_id)  {
+			if (lspdus.get(i).link_id == pkt.link_id && lspdus.get(i).router_id == pkt.router_id)  {
 				return;
 			}
 		}
 
 		lspdus.add(pkt);
-
+		int sender_link_id = pkt.link_id;
+		for (int i=0; i < links.length; i++) {
+			if (links[i].link_id != sender_link_id) {
+ 				sendLSPDU(links[i].link_id, pkt);
+			}
+		}
 	}
 
 	private static void sendInit() throws Exception {
