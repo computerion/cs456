@@ -50,6 +50,7 @@ public class router {
 	    	for (int j=0; j < NBR_ROUTER; j++) {
 	    		adjacency[i][j] = 2147483647;
 	    	}
+	    	adjacency[i][i] = 0;
 	    }
 
 	    for(int i=0; i<routingTable.length; i++) {
@@ -122,11 +123,12 @@ public class router {
 
 	private static void updateRoutingTable(pkt_LSPDU pkt) {
 		Boolean adjacencyMatrixUpdated = false;
+		System.out.println("hi");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU seen_pkt = lspdus.get(i);
 			if (pkt.link_id == seen_pkt.link_id) {
-				adjacency[pkt.router_id][seen_pkt.router_id] = pkt.cost;
-				adjacency[seen_pkt.router_id][pkt.router_id] = pkt.cost;
+				adjacency[pkt.router_id-1][seen_pkt.router_id-1] = pkt.cost;
+				adjacency[seen_pkt.router_id-1][pkt.router_id-1] = pkt.cost;
 			}
 		}
 		for (int i=0; i<NBR_ROUTER; i++) {
