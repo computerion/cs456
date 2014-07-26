@@ -74,6 +74,10 @@ public class router {
 	    	pkt_LSPDU lspdu = new pkt_LSPDU(routerId, l.link_id, l.cost);
 	    	lspdus.add(lspdu);
 	    }
+	    routerLog.printf("R%03d receives a CIRCUIT_DB: nbr_link %03d\n", routerId, circutDB.nbr_link);
+	    routerLog.flush();
+
+	    logTopology();
 	}
 
 	private static void listen() throws Exception {
@@ -93,7 +97,6 @@ public class router {
 	private static void handleHello(pkt_HELLO pkt) throws Exception {
 		int router_id = pkt.router_id;
 		int link_id = pkt.link_id;
-		//System.out.println("Handling Hello");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU lspdu_pkt = lspdus.get(i);
 			sendLSPDU(link_id, lspdu_pkt);
@@ -103,6 +106,8 @@ public class router {
 				links[i].reciever_router_id = router_id;
 			}
 		}
+		routerLog.printf("R%03d receives a HELLO: router_id %03d link_id %03d\n", routerId, pkt.router_id, pkt.link_id);
+    	routerLog.flush();
 	}
 
 	private static void handleLSPDU(pkt_LSPDU pkt) throws Exception {
@@ -120,11 +125,13 @@ public class router {
  				sendLSPDU(links[i].link_id, pkt);
 			}
 		}
+
+		routerLog.printf("R%03d receives an LS PDU: sender %03d, router_id %03d, link_id %03d, cost %03d, via %03d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
+    	routerLog.flush();
 	}
 
 	private static void updateRoutingTable(pkt_LSPDU pkt) {
 		Boolean adjacencyMatrixUpdated = false;
-		//System.out.println("hi");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU seen_pkt = lspdus.get(i);
 			if (pkt.link_id == seen_pkt.link_id) {
@@ -133,17 +140,30 @@ public class router {
 				adjacency[seen_pkt.router_id-1][pkt.router_id-1] = new link_cost(pkt.link_id, pkt.cost);
 			}
 		}
-		/*
-		for (int i=0; i<NBR_ROUTER; i++) {
-			for (int j=0; j<NBR_ROUTER; j++) {
-				System.out.print(adjacency[i][j] + " ");
-			}
-			System.out.println();
-		}
-		*/
+
+		logTopology();
+
 		if (adjacencyMatrixUpdated) {
 			updateShortestPath();
 		}
+	}
+
+	private static void logTopology() {
+		for (int i=0; i < NBR_ROUTER; i++) {
+			ArrayList<pkt_LSPDU> edges = new ArrayList<pkt_LSPDU>();
+			for (int j=0; j<lspdus.size(); j++) {
+				pkt_LSPDU lspdu_pkt = lspdus.get(j);
+				if (lspdu_pkt.router_id == i + 1) {
+					edges.add(lspdu_pkt);
+				}
+			}
+			routerLog.printf("R%03d -> R%03d nbr link %03d\n", routerId, i+1, edges.size());
+			for (int j=0; j<edges.size(); j++) {
+				pkt_LSPDU lspdu_pkt = edges.get(j);
+				routerLog.printf("R%03d -> R%03d link %03d cost %03d\n", routerId, i+1, lspdu_pkt.link_id, lspdu_pkt.cost);
+			}
+		}
+		routerLog.flush();
 	}
 
 	private static void updateShortestPath() {
@@ -184,25 +204,34 @@ public class router {
 				}
 			}
 		}
-		System.out.println();
 		for (int i=0; i<NBR_ROUTER; i++) {
 			int nextId = next_router_id[i];
 			link routingLink = new link(nextId, adjacency[routerId -1][nextId].link, dist[i]);
-			System.out.println(i + " " + nextId + " " + adjacency[routerId -1][nextId].link + " " + dist[i]);
+			if (dist[i] == DIST_INFINITE) {
+				routerLog.printf("R%03d -> R%03d -> INF, INF\n", routerId, i + 1);
+			} else if (i == routerId -1) {
+				routerLog.printf("R%03d -> R%03d -> Local, 0\n", routerId, i + 1);
+			} else {
+				routerLog.printf("R%03d -> R%03d -> R%03d, 0\n", routerId, i + 1, nextId + 1, dist[i]);
+			}
 		}
+		routerLog.flush();
 	}
 
 	private static void sendInit() throws Exception {
 		pkt_INIT pkt = new pkt_INIT(routerId);
     	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
+    	routerLog.printf("R%03d sends an INIT: router_id %03d\n", routerId, routerId);
+    	routerLog.flush();
 	}
 
 	private static void sendLSPDU(int link_id, pkt_LSPDU pkt) throws Exception {
 		pkt.setDestination(routerId, link_id);
-		//System.out.println("Sending out LSPDU: " + pkt.link_id + " " + pkt.router_id + " " + pkt.cost);
-    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort); 
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort);
     	socket.send(sendPacket);
+    	routerLog.printf("R%03d sends an LS PDU: sender %03d, router_id %03d, link_id %03d, cost %03d, via %03d\n", routerId, pkt.sender, pkt.router_id, pkt.link_id, pkt.cost, pkt.via);
+    	routerLog.flush();
 	}
 
 	private static void sendHellos() throws Exception {
@@ -210,6 +239,8 @@ public class router {
 			pkt_HELLO pkt = new pkt_HELLO(routerId, links[i].link_id);
 	    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_HELLO.SIZE, hostAddress, hostPort); 
 	    	socket.send(sendPacket);
+	    	routerLog.printf("R%03d sends a HELLO: router_id %03d link_id %03d\n", routerId, routerId, links[i].link_id);
+    		routerLog.flush();
 		}
 	}
 }
