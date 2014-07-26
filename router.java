@@ -41,13 +41,16 @@ public class router {
 		ByteBuffer buffer = ByteBuffer.allocate(512);
 		buffer.order(ByteOrder.LITTLE_ENDIAN);
 		buffer.putInt(routerId);
-    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 512, hostAddress, hostPort);  
+    	DatagramPacket sendPacket = new DatagramPacket(buffer.array(), 512, hostAddress, hostPort); 
+    	System.out.println("Sending"); 
     	socket.send(sendPacket);
+    	System.out.println("Sent Packets");
 	}
 
 	private static void recieveCircuitDB() throws Exception {
 		byte[] data = new byte[512];
 	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
+	    System.out.println("Recieving");
 	    socket.receive(receivePacket);
 	    ByteBuffer buffer = ByteBuffer.wrap(receivePacket.getData());
 	    buffer.order(ByteOrder.LITTLE_ENDIAN);
