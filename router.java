@@ -34,7 +34,7 @@ public class router {
 	    hostPort = Integer.parseInt(args[2]);
 	    routerPort = Integer.parseInt(args[3]);
 
-	    routerLog = new PrintWriter(new FileWriter(String.format("router%i.log", routerId)), true);
+	    routerLog = new PrintWriter(new FileWriter(String.format("router%03d.log", routerId)), true);
 	  }
 
 	private static void sendInit() throws Exception {
