@@ -6,10 +6,11 @@ import java.nio.*;
 public class router {
 
 	public static final int NBR_ROUTER = 5;
+	public static final int DIST_INFINITE = 2147483647;
 	private static int routerId;
 	private static link[] links;
 	private static link[] routingTable;
-	private static int[][] adjacency;
+	private static link_cost[][] adjacency;
 
 	private static DatagramSocket socket;
 	private static int routerPort;
@@ -44,17 +45,17 @@ public class router {
 	    routerPort = Integer.parseInt(args[3]);
 	    routingTable = new link[NBR_ROUTER];
 	    lspdus = new ArrayList<pkt_LSPDU>();
-	    adjacency = new int[NBR_ROUTER][NBR_ROUTER];
+	    adjacency = new link_cost[NBR_ROUTER][NBR_ROUTER];
 
 	    for (int i=0; i < NBR_ROUTER; i++) {
 	    	for (int j=0; j < NBR_ROUTER; j++) {
-	    		adjacency[i][j] = 2147483647;
+	    		adjacency[i][j] = new link_cost(-1, DIST_INFINITE);
 	    	}
-	    	adjacency[i][i] = 0;
+	    	adjacency[i][i] = new link_cost(-1, 0);
 	    }
 
 	    for(int i=0; i<routingTable.length; i++) {
-	    	routingTable[i] = new link(i+1, -1, 2147483647);
+	    	routingTable[i] = new link(i+1, -1, DIST_INFINITE);
 	    }
 
 	    routerLog = new PrintWriter(new FileWriter(String.format("router%03d.log", routerId)), true);
@@ -123,19 +124,69 @@ public class router {
 
 	private static void updateRoutingTable(pkt_LSPDU pkt) {
 		Boolean adjacencyMatrixUpdated = false;
-		System.out.println("hi");
+		//System.out.println("hi");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU seen_pkt = lspdus.get(i);
 			if (pkt.link_id == seen_pkt.link_id) {
-				adjacency[pkt.router_id-1][seen_pkt.router_id-1] = pkt.cost;
-				adjacency[seen_pkt.router_id-1][pkt.router_id-1] = pkt.cost;
+				adjacencyMatrixUpdated = true;
+				adjacency[pkt.router_id-1][seen_pkt.router_id-1] = new link_cost(pkt.link_id, pkt.cost);
+				adjacency[seen_pkt.router_id-1][pkt.router_id-1] = new link_cost(pkt.link_id, pkt.cost);
 			}
 		}
+		/*
 		for (int i=0; i<NBR_ROUTER; i++) {
 			for (int j=0; j<NBR_ROUTER; j++) {
 				System.out.print(adjacency[i][j] + " ");
 			}
 			System.out.println();
+		}
+		*/
+		if (adjacencyMatrixUpdated) {
+			updateShortestPath();
+		}
+	}
+
+	private static void updateShortestPath() {
+		int[] dist = new int[NBR_ROUTER];
+		int[] next_router_id = new int[NBR_ROUTER];
+		ArrayList<Integer> queue = new ArrayList<Integer>();
+		for (int i=0; i<NBR_ROUTER; i++) {
+			if (i != routerId - 1) {
+				dist[i] = DIST_INFINITE;
+			} else {
+				dist[i] = 0;
+			}
+			next_router_id[i] = i;
+			queue.add(i);
+		}
+		while (queue.size() > 0) {
+			int min_dist = DIST_INFINITE;
+			int index = 0;
+			for (int i=0; i < queue.size(); i++) {
+				int router = queue.get(i);
+				if (min_dist > dist[router]) {
+					min_dist = dist[router];
+					index = i;
+				}
+			}
+			int rid = queue.get(index);
+			queue.remove(index);
+
+			for (int i=0; i<NBR_ROUTER; i++) {
+				if (adjacency[i][rid].cost < DIST_INFINITE) {
+					int distance = dist[rid] + adjacency[i][rid].cost;
+					if (distance < dist[i]) {
+						dist[i] = distance;
+						next_router_id[i] = next_router_id[rid];
+					}
+				}
+			}
+		}
+		System.out.println();
+		for (int i=0; i<NBR_ROUTER; i++) {
+			int nextId = next_router_id[i];
+			link routingLink = new link(nextId, adjacency[routerId -1][nextId].link, dist[i]);
+			System.out.println(i + " " + nextId + " " + adjacency[routerId -1][nextId].link + " " + dist[i]);
 		}
 	}
 
