@@ -50,15 +50,15 @@ public class router {
 	    socket.receive(receivePacket);
 	    circuit_DB circutDB = circuit_DB.getData(receivePacket.getData());
 
-	    links = new links[circuit_DB.nbr_link];
-	    for (int i=0; i<circuit_DB.nbr_link; i++) {
-	    	links[i] = new link(circuit_DB.link_cost[i]);
+	    links = new link[circutDB.nbr_link];
+	    for (int i=0; i<circutDB.nbr_link; i++) {
+	    	links[i] = new link(circutDB.linkcost[i]);
 	    }
 	}
 
 	private static void sendHellos() throws Exception {
 		for (int i=0; i<links.length; i++) {
-			pkt_HELLO pkt = new pkt_HELLO(routerId, link[i].link_id);
+			pkt_HELLO pkt = new pkt_HELLO(routerId, links[i].link_id);
 	    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_HELLO.SIZE, hostAddress, hostPort); 
 	    	socket.send(sendPacket);
 		}
