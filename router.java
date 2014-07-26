@@ -121,8 +121,8 @@ public class router {
 
 	private static void sendLSPDU(int link_id, pkt_LSPDU pkt) throws Exception {
 		pkt.setDestination(routerId, link_id);
-		System.out.println("Sending out LSPDU: " + lspdu_pkt.link_id + " " + lspdu_pkt.router_id + " " + lspdu_pkt.cost);
-    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), 20, hostAddress, hostPort); 
+		System.out.println("Sending out LSPDU: " + pkt.link_id + " " + pkt.router_id + " " + pkt.cost);
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
 	}
 
