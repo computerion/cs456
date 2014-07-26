@@ -1,0 +1,13 @@
+Run this app by:
+
+1. cd into this directory
+2. run make
+3. Open NBR_ROUTER + 1 terminals to this directory
+4. run your NSE on one terminal
+5. run java router <router_id> <nse_host> <nse_port> <router_port> on each other terminal
+
+This program was tested on my home computer as well as the linux box computers namely: ubuntu1204-006 and ubuntu1204-002
+
+Make is GNU Make 3.81
+java version "1.8.0_05"
+javac 1.8.0_05

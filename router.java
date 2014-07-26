@@ -6,12 +6,13 @@ import java.nio.*;
 public class router {
 
 	public static final int NBR_ROUTER = 5;
-	public static final int DIST_INFINITE = 2147483647;
-	private static int routerId;
-	private static link[] links;
-	private static link[] routingTable;
-	private static link_cost[][] adjacency;
+	public static final int DIST_INFINITE = 2147483647; /* Maximum integer size represents a lack of connection between two routers */
+	private static int routerId; /* ID of the router */
+	private static link[] links; /* links that exist between this router and others */
+	private static link[] routingTable; /* the i-th node contains the router_id, link_id, and cost to get to that node */
+	private static link_cost[][] adjacency; /* The copy of the topology in adjacency matrix form */
 
+	/* UDP stuff */
 	private static DatagramSocket socket;
 	private static int routerPort;
 	private static InetAddress hostAddress;
@@ -19,6 +20,7 @@ public class router {
 
 	private static PrintWriter routerLog;
 
+	/* All Seen LS PDUs */
 	private static ArrayList<pkt_LSPDU> lspdus;
 
 	public static void main(String[] args) throws Exception  {
@@ -47,6 +49,7 @@ public class router {
 	    lspdus = new ArrayList<pkt_LSPDU>();
 	    adjacency = new link_cost[NBR_ROUTER][NBR_ROUTER];
 
+	    /* initialize adjacency matrix to be empty */
 	    for (int i=0; i < NBR_ROUTER; i++) {
 	    	for (int j=0; j < NBR_ROUTER; j++) {
 	    		adjacency[i][j] = new link_cost(-1, DIST_INFINITE);
@@ -54,6 +57,7 @@ public class router {
 	    	adjacency[i][i] = new link_cost(-1, 0);
 	    }
 
+	    /* initalize routing table to contain no good distance to any other router */
 	    for(int i=0; i<routingTable.length; i++) {
 	    	routingTable[i] = new link(i+1, -1, DIST_INFINITE);
 	    }
@@ -68,6 +72,8 @@ public class router {
 	    circuit_DB circutDB = circuit_DB.getData(receivePacket.getData());
 
 	    links = new link[circutDB.nbr_link];
+
+	    /* Create a LS PDU entry for each link this router has. It will send these to neighbours when received hellos and LS PDUs */
 	    for (int i=0; i<circutDB.nbr_link; i++) {
 	    	link l = new link(circutDB.linkcost[i]);
 	    	links[i] = l;
@@ -97,10 +103,14 @@ public class router {
 	private static void handleHello(pkt_HELLO pkt) throws Exception {
 		int router_id = pkt.router_id;
 		int link_id = pkt.link_id;
+
+		/* Send all seen and personal LS PDU's to this new discovered neighbour */
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU lspdu_pkt = lspdus.get(i);
 			sendLSPDU(link_id, lspdu_pkt);
 		}
+
+		/* Find which link_id connects to this neighbour */
 		for (int i=0; i<links.length; i++) {
 			if (links[i].link_id == link_id) {
 				links[i].reciever_router_id = router_id;
@@ -111,15 +121,20 @@ public class router {
 	}
 
 	private static void handleLSPDU(pkt_LSPDU pkt) throws Exception {
+		/* If this LS PDU has been seen before, ignore it */
 		for (int i=0; i<lspdus.size(); i++) {
 			if (lspdus.get(i).link_id == pkt.link_id && lspdus.get(i).router_id == pkt.router_id)  {
 				return;
 			}
 		}
 
+		/* Update the adjacency Matrix and Routing Table */
 		updateRoutingTable(pkt);
+
+		/* Add this as a seen LS PDU */
 		lspdus.add(pkt);
 		
+		/* Send LSPDU's to neighbours */
 		int sender_link_id = pkt.link_id;
 		for (int i=0; i < links.length; i++) {
 			if (links[i].link_id != sender_link_id) {
@@ -138,6 +153,7 @@ public class router {
 		Boolean adjacencyMatrixUpdated = false;
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU seen_pkt = lspdus.get(i);
+			/* Once we have a LS PDU with two different router_ids but same link_id, we know this is a connection in the topology */
 			if (pkt.link_id == seen_pkt.link_id) {
 				adjacencyMatrixUpdated = true;
 				adjacency[pkt.router_id-1][seen_pkt.router_id-1] = new link_cost(pkt.link_id, pkt.cost);
@@ -146,6 +162,7 @@ public class router {
 		}
 
 		if (adjacencyMatrixUpdated) {
+			/* If a connection is discovered, update the shortest path table */
 			updateShortestPath();
 		}
 	}
@@ -182,8 +199,9 @@ public class router {
 	}
 
 	private static void updateShortestPath() {
+		/* Dijkstra's algorithm inspired by wikipedia: http://en.wikipedia.org/wiki/Dijkstra%27s_algorithm */
 		int[] dist = new int[NBR_ROUTER];
-		int[] next_router_id = new int[NBR_ROUTER];
+		int[] next_router_id = new int[NBR_ROUTER]; /* Keep track of which adjacent router_id is used to get to the shortest distance */
 		ArrayList<Integer> queue = new ArrayList<Integer>();
 		for (int i=0; i<NBR_ROUTER; i++) {
 			if (i != routerId - 1) {
@@ -219,6 +237,8 @@ public class router {
 				}
 			}
 		}
+
+		/* Update the entries of the routing table */
 		for (int i=0; i<NBR_ROUTER; i++) {
 			int nextId = next_router_id[i];
 			link routingLink = new link(nextId + 1, adjacency[routerId -1][nextId].link, dist[i]);
