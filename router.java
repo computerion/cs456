@@ -20,6 +20,7 @@ public class router {
 		init(args);
 		sendInit();
 		recieveCircuitDB();
+		sendHellos();
 	}
 
 	private static void init(String args[]) throws Exception {
@@ -39,7 +40,7 @@ public class router {
 
 	private static void sendInit() throws Exception {
 		pkt_INIT pkt = new pkt_INIT(routerId);
-    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), 4, hostAddress, hostPort); 
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
 	}
 
@@ -48,11 +49,18 @@ public class router {
 	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
 	    socket.receive(receivePacket);
 	    circuit_DB circutDB = circuit_DB.getData(receivePacket.getData());
+
+	    links = new links[circuit_DB.nbr_link];
+	    for (int i=0; i<circuit_DB.nbr_link; i++) {
+	    	links[i] = new link(circuit_DB.link_cost[i]);
+	    }
 	}
 
 	private static void sendHellos() throws Exception {
 		for (int i=0; i<links.length; i++) {
-			
+			pkt_HELLO pkt = new pkt_HELLO(routerId, link[i].link_id);
+	    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_HELLO.SIZE, hostAddress, hostPort); 
+	    	socket.send(sendPacket);
 		}
 	}
 }
@@ -69,6 +77,7 @@ class link {
 }
 
 class pkt_HELLO { 
+	public static final int SIZE = 8;
 	public int router_id; /* id of the router who sends the HELLO PDU */ 
 	public int link_id; /* id of the link through which it is sent */
 
@@ -78,7 +87,7 @@ class pkt_HELLO {
 	}
 
 	public byte[] toByte() {
-		ByteBuffer buffer = ByteBuffer.allocate(8);
+		ByteBuffer buffer = ByteBuffer.allocate(SIZE);
 		buffer.putInt(router_id);
 		buffer.putInt(link_id);
 		return buffer.array();
@@ -102,6 +111,7 @@ class pkt_LSPDU {
 }
 
 class pkt_INIT { 
+	public static final int SIZE = 4;
 	public int router_id; /* id of the router that send the INIT PDU */
 
 	public pkt_INIT(int router_id) {
