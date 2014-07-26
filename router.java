@@ -8,6 +8,7 @@ public class router {
 	public static final int NBR_ROUTER = 5;
 	private static int routerId;
 	private static link[] links;
+	private static link[] routingTable;
 
 	private static DatagramSocket socket;
 	private static int routerPort;
@@ -15,6 +16,8 @@ public class router {
 	private static int hostPort;
 
 	private static PrintWriter routerLog;
+
+	private static ArrayList<pkt_LSPDU> lspdus;
 
 	public static void main(String[] args) throws Exception  {
 		init(args);
@@ -38,15 +41,14 @@ public class router {
 	    hostAddress = InetAddress.getByName(args[1]);
 	    hostPort = Integer.parseInt(args[2]);
 	    routerPort = Integer.parseInt(args[3]);
+	    routingTable = new link[NBR_ROUTER];
+
+	    for(int i=0; i<routingTable.length; i++) {
+	    	routingTable[i] = new link(i+1, -1, 2147483647);
+	    }
 
 	    routerLog = new PrintWriter(new FileWriter(String.format("router%03d.log", routerId)), true);
 	  }
-
-	private static void sendInit() throws Exception {
-		pkt_INIT pkt = new pkt_INIT(routerId);
-    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
-    	socket.send(sendPacket);
-	}
 
 	private static void recieveCircuitDB() throws Exception {
 		byte[] data = new byte[512];
@@ -56,8 +58,62 @@ public class router {
 
 	    links = new link[circutDB.nbr_link];
 	    for (int i=0; i<circutDB.nbr_link; i++) {
-	    	links[i] = new link(circutDB.linkcost[i]);
+	    	link l = new link(circutDB.linkcost[i]);
+	    	links[i] = l;
+	    	pkt_LSPDU lspdu = new pkt_LSPDU(routerId, l.link_id, l.cost);
+	    	lspdus.add(lspdu);
 	    }
+	}
+
+	private static void listen() throws Exception {
+		byte[] data = new byte[512];
+	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
+	    socket.receive(receivePacket);
+	    int packetSize = receivePacket.getLength();
+	    if (packetSize == pkt_HELLO.SIZE) {
+	    	pkt_HELLO pkt = pkt_HELLO.getData(receivePacket.getData());
+	    	handleHello(pkt);
+	    } else if (packetSize == pkt_LSPDU.SIZE) {
+	    	pkt_LSPDU pkt = pkt_LSPDU.getData(receivePacket.getData());
+	    	handleLSPDU(pkt);
+	    }
+	}
+
+	private static void handleHello(pkt_HELLO pkt) throws Exception {
+		int router_id = pkt.router_id;
+		int link_id = pkt.link_id;
+		for (int i=0; i<lspdus.size(); i++) {
+			pkt_LSPDU lspdu_pkt = lspdus.get(i);
+			sendLSPDU(link_id, lspdu_pkt);
+		}
+		for (int i=0; i<links.length; i++) {
+			if (links[i].link_id == link_id) {
+				links[i].reciever_router_id = router_id;
+			}
+		}
+	}
+
+	private static void handleLSPDU(pkt_LSPDU pkt) throws Exception {
+		for (int i=0; i<lspdus.size(); i++) {
+			if (lspdus.get(i).link_id == pkt.link_id)  {
+				return;
+			}
+		}
+
+		lspdus.add(pkt);
+
+	}
+
+	private static void sendInit() throws Exception {
+		pkt_INIT pkt = new pkt_INIT(routerId);
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
+    	socket.send(sendPacket);
+	}
+
+	private static void sendLSPDU(int link_id, pkt_LSPDU pkt) throws Exception {
+		pkt.setDestination(routerId, link_id);
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
+    	socket.send(sendPacket);
 	}
 
 	private static void sendHellos() throws Exception {
@@ -67,19 +123,18 @@ public class router {
 	    	socket.send(sendPacket);
 		}
 	}
-
-	private static void listen() throws Exception {
-		byte[] data = new byte[512];
-	    DatagramPacket receivePacket = new DatagramPacket(data, data.length);  
-	    socket.receive(receivePacket);
-	    System.out.println("Recieved: " + receivePacket.getLength());
-	}
 }
 
 class link {
 	public int reciever_router_id;
 	public int link_id;
 	public int cost;
+
+	public link(int reciever_router_id, int link_id, int cost) {
+		this.reciever_router_id = reciever_router_id;
+		this.link_id = link_id;
+		this.cost = cost;
+	}
 
 	public link(link_cost lc) {
 		link_id = lc.link;
@@ -122,11 +177,22 @@ class pkt_LSPDU {
 	public int cost; /* cost of the link */ 
 	public int via; /* id of the link through which the LS PDU is sent */
 
-	public pkt_LSPDU(int sender, int router_id, int link_id, int cost, int via) {
+	public pkt_LSPDU(int router_id, int link_id, int cost, int sender, int via) {
 		this.sender = sender;
 		this.router_id = router_id;
 		this.link_id = link_id;
 		this.cost = cost;
+		this.via = via;
+	}
+
+	public pkt_LSPDU(int router_id, int link_id, int cost) {
+		this.router_id = router_id;
+		this.link_id = link_id;
+		this.cost = cost;
+	}
+
+	public void setDestination(int sender, int via) {
+		this.sender = sender;
 		this.via = via;
 	}
 
@@ -149,7 +215,7 @@ class pkt_LSPDU {
 		int link_id = buffer.getInt();
 		int cost = buffer.getInt();
 		int via = buffer.getInt();
-		return new pkt_LSPDU(sender, router_id, link_id, cost, via);
+		return new pkt_LSPDU(router_id, link_id, cost, sender, via);
 	}
 }
 
@@ -206,7 +272,6 @@ class circuit_DB {
 	    	int link_id = buffer.getInt();
 	    	int cost = buffer.getInt();
 	    	linkcost[i] = new link_cost(link_id, cost);
-	    	System.out.println(linkcost[i].link + " " + linkcost[i].cost);
 	    }
 
 	    return new circuit_DB(nbr_link, linkcost);
