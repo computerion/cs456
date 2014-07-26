@@ -177,7 +177,9 @@ public class router {
 					int distance = dist[rid] + adjacency[i][rid].cost;
 					if (distance < dist[i]) {
 						dist[i] = distance;
-						next_router_id[i] = next_router_id[rid];
+						if (routerId - 1 != rid) {
+							next_router_id[i] = next_router_id[rid];
+						}
 					}
 				}
 			}
