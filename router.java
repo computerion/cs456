@@ -88,7 +88,6 @@ public class router {
 		System.out.println("Handling Hello");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU lspdu_pkt = lspdus.get(i);
-			System.out.println("Sending out LSPDU: " + lspdu_pkt.link_id + " " + lspdu_pkt.router_id);
 			sendLSPDU(link_id, lspdu_pkt);
 		}
 		for (int i=0; i<links.length; i++) {
@@ -122,7 +121,8 @@ public class router {
 
 	private static void sendLSPDU(int link_id, pkt_LSPDU pkt) throws Exception {
 		pkt.setDestination(routerId, link_id);
-    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_INIT.SIZE, hostAddress, hostPort); 
+		System.out.println("Sending out LSPDU: " + lspdu_pkt.link_id + " " + lspdu_pkt.router_id + " " + lspdu_pkt.cost);
+    	DatagramPacket sendPacket = new DatagramPacket(pkt.toByte(), pkt_LSPDU.SIZE, hostAddress, hostPort); 
     	socket.send(sendPacket);
 	}
 
