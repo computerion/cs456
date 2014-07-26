@@ -63,6 +63,7 @@ public class router {
 	    	links[i] = l;
 	    	pkt_LSPDU lspdu = new pkt_LSPDU(routerId, l.link_id, l.cost);
 	    	lspdus.add(lspdu);
+	    	System.out.println("new link: " + lspdus.size() + " " +l.link_id + " " + l.cost);
 	    }
 	}
 
