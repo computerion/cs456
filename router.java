@@ -85,8 +85,10 @@ public class router {
 	private static void handleHello(pkt_HELLO pkt) throws Exception {
 		int router_id = pkt.router_id;
 		int link_id = pkt.link_id;
+		System.out.println("Handling Hello");
 		for (int i=0; i<lspdus.size(); i++) {
 			pkt_LSPDU lspdu_pkt = lspdus.get(i);
+			System.out.println("Sending out LSPDU: " + lspdu_pkt.link_id + " " + lspdu_pkt.router_id);
 			sendLSPDU(link_id, lspdu_pkt);
 		}
 		for (int i=0; i<links.length; i++) {
